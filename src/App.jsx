@@ -1,740 +1,712 @@
-import { useState, useEffect, useRef } from "react";
-
-const DGIS_KEY = "9a637f92-4af5-4ca6-b86a-47cd8459b2f6";
-
-const PLACES = [
-    {
-        id: 1,
-        name: "Сулайман-Тоо",
-        category: "Природа",
-        emoji: "⛰️",
-        xp: 150,
-        color: "#7C5C3A",
-        bg: "#FFF4E6",
-        locked: false,
-        lat: 40.5275,
-        lng: 72.7985,
-        tasks: ["Подняться на вершину", "Найти петроглифы", "Сфотографировать закат"],
-    },
-    {
-        id: 2,
-        name: "Базар Джайма",
-        category: "Культура",
-        emoji: "🛒",
-        xp: 80,
-        color: "#2E7D6E",
-        bg: "#E6F7F4",
-        locked: false,
-        lat: 40.5233,
-        lng: 72.7969,
-        tasks: ["Попробовать самсу", "Найти ряд специй", "Поторговаться"],
-    },
-    {
-        id: 3,
-        name: "Мечеть Равзат",
-        category: "История",
-        emoji: "🕌",
-        xp: 100,
-        color: "#5B4A8A",
-        bg: "#F0ECFB",
-        locked: false,
-        lat: 40.526,
-        lng: 72.794,
-        tasks: ["Изучить архитектуру", "Узнать историю"],
-    },
-    {
-        id: 4,
-        name: "Парк Победы",
-        category: "Природа",
-        emoji: "🌳",
-        xp: 60,
-        color: "#3A7A3A",
-        bg: "#EAF5EA",
-        locked: true,
-        lat: 40.531,
-        lng: 72.802,
-        tasks: ["Найти фонтан", "Познакомиться с местным", "Сделать пикник"],
-    },
-    {
-        id: 5,
-        name: "Река Ак-Буура",
-        category: "Природа",
-        emoji: "🌊",
-        xp: 90,
-        color: "#1A6B9A",
-        bg: "#E6F2FA",
-        locked: true,
-        lat: 40.518,
-        lng: 72.81,
-        tasks: ["Пройти 1 км по берегу", "Найти мост с замками", "Увидеть рассвет"],
-    },
-    {
-        id: 6,
-        name: "Старый город",
-        category: "История",
-        emoji: "🏘️",
-        xp: 120,
-        color: "#9A5A1A",
-        bg: "#FAF2E6",
-        locked: true,
-        lat: 40.529,
-        lng: 72.791,
-        tasks: ["Найти дом 100+ лет", "Попробовать чай в чайхане", "Сфоткать ворота"],
-    },
-];
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Bookmark,
+  Calendar,
+  Check,
+  ChevronLeft,
+  Clock,
+  Compass,
+  Heart,
+  Map as MapIcon,
+  MapPin,
+  Navigation,
+  Search,
+  Sparkles,
+  Star,
+  Ticket,
+  User,
+  Users,
+} from "lucide-react";
+import {
+  ATTRACTIONS,
+  CATEGORIES,
+  CITY,
+  EXPERIENCES,
+  loadLeaflet,
+  makeCode,
+  upcomingDates,
+} from "./data.js";
 const TABS = [
-    { id: "home", emoji: "🏠", label: "Главная" },
-    { id: "map", emoji: "🗺️", label: "Карта" },
-    { id: "community", emoji: "👥", label: "Люди" },
-    { id: "profile", emoji: "👤", label: "Профиль" },
+  { id: "home", label: "Главная", Icon: Compass },
+  { id: "map", label: "Карта", Icon: MapIcon },
+  { id: "saved", label: "Избранное", Icon: Bookmark },
+  { id: "bookings", label: "Билеты", Icon: Ticket },
+  { id: "profile", label: "Профиль", Icon: User },
 ];
 
-const STEPS_DATA = [
-    { day: "Пн", steps: 3200, cal: 128 },
-    { day: "Вт", steps: 5800, cal: 232 },
-    { day: "Ср", steps: 2100, cal: 84 },
-    { day: "Чт", steps: 7400, cal: 296 },
-    { day: "Пт", steps: 4900, cal: 196 },
-    { day: "Сб", steps: 9100, cal: 364 },
-    { day: "Вс", steps: 6300, cal: 252 },
-];
+function BottomNav({ tab, setTab }) {
+  const draggingRef = useRef(false);
 
-const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-const VISITED_DAYS = [3, 5, 8, 10, 15, 17, 21, 23];
+  const pickTabAt = (x, y) => {
+    const el = document.elementFromPoint(x, y);
+    const btn = el && el.closest ? el.closest("[data-tab-id]") : null;
+    if (btn) {
+      const id = btn.getAttribute("data-tab-id");
+      setTab((prev) => (prev === id ? prev : id));
+    }
+  };
 
-function ActivityCard({ maxSteps }) {
-    return (
-        <div style={{ background: "white", borderRadius: 20, padding: "18px 16px", marginTop: 8, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>Активность</div>
-                <div style={{ fontSize: 12, color: "#888" }}>эта неделя</div>
-            </div>
+  const handlePointerDown = (e) => {
+    draggingRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pickTabAt(e.clientX, e.clientY);
+  };
 
-            <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-                <div style={{ background: "#FFF4E6", borderRadius: 10, padding: "6px 12px" }}>
-                    <span style={{ fontSize: 12, color: "#E86A2A", fontWeight: 700 }}>
-                        👟 {STEPS_DATA.reduce((a, d) => a + d.steps, 0).toLocaleString()} шагов
-                    </span>
-                </div>
-                <div style={{ background: "#FFF0E8", borderRadius: 10, padding: "6px 12px" }}>
-                    <span style={{ fontSize: 12, color: "#C84A0A", fontWeight: 700 }}>
-                        🔥 {STEPS_DATA.reduce((a, d) => a + d.cal, 0)} ккал
-                    </span>
-                </div>
-            </div>
+  const handlePointerMove = (e) => {
+    if (!draggingRef.current) return;
+    pickTabAt(e.clientX, e.clientY);
+  };
 
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 80 }}>
-                {STEPS_DATA.map((d, i) => {
-                    const h = Math.round((d.steps / maxSteps) * 72);
-                    const isToday = i === 6;
+  const stopDragging = () => {
+    draggingRef.current = false;
+  };
 
-                    return (
-                        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                            <div style={{ fontSize: 9, color: "#E86A2A", fontWeight: 700, opacity: isToday ? 1 : 0 }}>{d.cal}</div>
-                            <div style={{ width: "100%", height: h, background: isToday ? "linear-gradient(180deg,#E86A2A,#D4A03A)" : "#F0EBE3", borderRadius: "4px 4px 0 0", position: "relative", minHeight: 4 }}>
-                                {isToday && <div style={{ position: "absolute", top: -4, left: "50%", transform: "translateX(-50%)", width: 8, height: 8, borderRadius: "50%", background: "#E86A2A" }} />}
-                            </div>
-                            <div style={{ fontSize: 9, color: isToday ? "#E86A2A" : "#AAA", fontWeight: isToday ? 800 : 400 }}>{d.day}</div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
+  return (
+    <nav
+      className="gyg-nav"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopDragging}
+      onPointerCancel={stopDragging}
+    >
+      {TABS.map((t) => (
+        <button
+          key={t.id}
+          data-tab-id={t.id}
+          className={tab === t.id ? "active" : ""}
+          onClick={() => setTab(t.id)}
+        >
+          <t.Icon size={20} />
+          <span>{t.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
 }
 
-function MapModal({ place, userLocation, completedTasks, onToggleTask, onClose }) {
-    const mapRef = useRef(null);
-    const mapInstance = useRef(null);
-    const [loaded, setLoaded] = useState(false);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        function initMap() {
-            if (cancelled || !mapRef.current || !window.mapgl) return;
-            if (mapInstance.current) {
-                try { mapInstance.current.destroy(); } catch (e) { }
-                mapInstance.current = null;
-            }
-            mapRef.current.innerHTML = "";
-            const map = new window.mapgl.Map(mapRef.current, {
-                center: [place.lng, place.lat], zoom: 16, key: DGIS_KEY,
-            });
-            mapInstance.current = map;
-            new window.mapgl.Marker(map, {
-                coordinates: [place.lng, place.lat],
-                label: { text: place.name, relativeAnchor: [0.5, 2] },
-            });
-            if (userLocation) {
-                new window.mapgl.Marker(map, {
-                    coordinates: [userLocation.lng, userLocation.lat],
-                    label: { text: "📍 Вы", relativeAnchor: [0.5, 2] },
-                });
-            }
-            if (!cancelled) setLoaded(true);
-        }
-
-        if (window.mapgl) { initMap(); return; }
-        const existing = document.querySelector("script[data-mapgl]");
-        if (existing) { existing.addEventListener("load", initMap, { once: true }); return; }
-        const script = document.createElement("script");
-        script.src = "https://mapgl.2gis.com/api/js/v1";
-        script.dataset.mapgl = "true";
-        script.addEventListener("load", initMap, { once: true });
-        document.head.appendChild(script);
-
-        return () => {
-            cancelled = true;
-            if (mapInstance.current) {
-                try { mapInstance.current.destroy(); } catch (e) { }
-                mapInstance.current = null;
-            }
-        };
-    }, [place, userLocation]);
-
-    const doneTasks = place.tasks.filter((_, i) => completedTasks[`${place.id}-${i}`]).length;
-    const progress = (doneTasks / place.tasks.length) * 100;
-
-    return (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", background: "white", maxWidth: 420, margin: "0 auto" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: "1px solid #F0EBE3", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                <button onClick={onClose} style={{ background: "#F0EBE3", border: "none", borderRadius: "50%", width: 36, height: 36, cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
-                <div style={{ fontSize: 28 }}>{place.emoji}</div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 900, fontSize: 16 }}>{place.name}</div>
-                    <div style={{ fontSize: 12, color: place.color, fontWeight: 600 }}>{place.category} · +{place.xp} XP</div>
-                </div>
-                {userLocation && <div style={{ fontSize: 11, color: "#22C55E", fontWeight: 700 }}>📍 GPS</div>}
-            </div>
-
-            <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
-                <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
-                {!loaded && (
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "#E8F0E8", zIndex: 1 }}>
-                        <div style={{ textAlign: "center" }}>
-                            <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
-                            <div style={{ color: "#555", fontSize: 14, fontWeight: 600 }}>Загружаем карту...</div>
-                            <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>2ГИС · Ош</div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div style={{ background: "white", borderRadius: "20px 20px 0 0", padding: "16px 16px 32px", maxHeight: "42vh", overflowY: "auto", flexShrink: 0, boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}>
-                <div style={{ width: 36, height: 4, background: "#E0E0E0", borderRadius: 2, margin: "0 auto 14px" }} />
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 12, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Задания</div>
-                    <div style={{ fontSize: 12, color: place.color, fontWeight: 700 }}>{doneTasks}/{place.tasks.length}</div>
-                </div>
-                <div style={{ height: 5, background: "#F0F0F0", borderRadius: 3, overflow: "hidden", marginBottom: 12 }}>
-                    <div style={{ height: "100%", width: `${progress}%`, background: place.color, borderRadius: 3, transition: "width .4s" }} />
-                </div>
-                {place.tasks.map((task, i) => {
-                    const done = completedTasks[`${place.id}-${i}`];
-                    return (
-                        <div key={i} onClick={() => onToggleTask(place.id, i)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: done ? place.bg : "#F8F8F8", borderRadius: 14, marginBottom: 8, cursor: "pointer", border: `2px solid ${done ? place.color : "transparent"}` }}>
-                            <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: done ? place.color : "#E0E0E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                {done && <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>✓</span>}
-                            </div>
-                            <span style={{ fontSize: 14, color: done ? place.color : "#444", fontWeight: done ? 600 : 400 }}>{task}</span>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
+function StarRow({ rating }) {
+  return (
+    <span className="row" style={{ gap: 4 }}>
+      <Star size={14} fill="#d4a359" color="#d4a359" />
+      <b style={{ fontSize: 13, color: "var(--ink)" }}>{rating.toFixed(1)}</b>
+    </span>
+  );
 }
+
+export function ExperienceCard({ exp, saved, onOpen, onToggleSave, compact }) {
+  return (
+    <article className="card exp-card" style={{ minWidth: compact ? 250 : undefined }}>
+      <div style={{ position: "relative" }}>
+        <img className="cover" src={exp.image} alt="" style={{ height: compact ? 138 : 176 }} />
+        {exp.badge && <div className="badge">{exp.badge}</div>}
+        <button
+          className="save-btn"
+          aria-label="Сохранить"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave(exp.id);
+          }}
+        >
+          <Heart size={18} fill={saved ? "#c85a32" : "none"} color={saved ? "#c85a32" : "#2b2520"} />
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => onOpen(exp)}
+        style={{
+          display: "block", width: "100%", textAlign: "left", border: "none",
+          background: "transparent", padding: "14px 14px 16px", cursor: "pointer",
+        }}
+      >
+        <div className="muted" style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.2px", marginBottom: 5 }}>
+          {exp.type.toUpperCase()} · {exp.duration}
+        </div>
+        <div style={{ fontWeight: 800, fontSize: compact ? 14 : 16, lineHeight: 1.3, marginBottom: 10, color: "var(--ink)", letterSpacing: "-0.2px" }}>
+          {exp.title}
+        </div>
+        <div className="row" style={{ justifyContent: "space-between" }}>
+          <StarRow rating={exp.rating} />
+          <div className="price">от ${exp.price}</div>
+        </div>
+      </button>
+    </article>
+  );
+}
+
+function MiniMap({ lat, lng, label }) {
+  const ref = useRef(null);
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLeaflet().then((L) => {
+      if (cancelled || !ref.current) return;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      const map = L.map(ref.current, { zoomControl: false, attributionControl: false }).setView([lat, lng], 15);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      L.marker([lat, lng]).addTo(map).bindTooltip(label, { permanent: true, direction: "top" });
+      mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 80);
+    }).catch(() => { });
+    return () => {
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [lat, lng, label]);
+
+  return <div ref={ref} style={{ height: 180, borderRadius: 16, overflow: "hidden", background: "var(--sand-100)", border: "1px solid var(--sand-200)" }} />;
+}
+
+function ExploreMap({ items, selectedId, onSelect, userLocation, footer }) {
+  const ref = useRef(null);
+  const mapRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLeaflet().then((L) => {
+      if (cancelled || !ref.current) return;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      const map = L.map(ref.current, { zoomControl: false }).setView([CITY.lat, CITY.lng], 14);
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(map);
+      items.forEach((exp) => {
+        L.marker([exp.lat, exp.lng]).addTo(map)
+          .bindTooltip(exp.place, { permanent: false })
+          .on("click", () => onSelect(exp.id));
+      });
+      mapRef.current = map;
+      setTimeout(() => map.invalidateSize(), 120);
+    }).catch(() => { if (!cancelled) setFailed(true); });
+    return () => {
+      cancelled = true;
+      userMarkerRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [items, onSelect]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const exp = items.find((x) => x.id === selectedId);
+    if (map && exp) map.setView([exp.lat, exp.lng], 15);
+  }, [selectedId, items]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || !window.L) return;
+    if (userMarkerRef.current) {
+      userMarkerRef.current.setLatLng([userLocation.lat, userLocation.lng]);
+      return;
+    }
+    userMarkerRef.current = window.L.circleMarker([userLocation.lat, userLocation.lng], {
+      radius: 8, color: "#c85a32", fillColor: "#c85a32", fillOpacity: 1,
+    }).addTo(map).bindTooltip("Вы", { permanent: true, direction: "right" });
+  }, [userLocation]);
+
+  return (
+    <div className="map-wrap">
+      <div ref={ref} className="map-canvas" />
+      {failed && (
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", background: "var(--sand-100)", color: "var(--muted)" }}>
+          Карта недоступна. Проверьте сеть.
+        </div>
+      )}
+      {footer}
+    </div>
+  );
+}
+
+function Home({
+  query, setQuery, category, setCategory, saved, onOpen, onToggleSave, onEnableGeo, userLocation,
+}) {
+  const practices = EXPERIENCES.filter((e) => e.category === "practices" || e.badge === "Практика");
+  const filtered = EXPERIENCES.filter((e) => {
+    const byCat = category === "all" || e.category === category || (category === "practices" && e.badge === "Практика");
+    const q = query.trim().toLowerCase();
+    const byQ = !q || `${e.title} ${e.place} ${e.type}`.toLowerCase().includes(q);
+    return byCat && byQ;
+  });
+
+  return (
+    <div className="gyg-scroll">
+      <div style={{ background: "var(--sand-50)", padding: "22px 18px 14px", borderBottom: "1px solid var(--line)" }}>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
+          <div className="muted" style={{ fontWeight: 700, fontSize: 12, letterSpacing: "0.5px", textTransform: "uppercase" }}>
+            Локальный гид · Ош
+          </div>
+          <span className="row muted" style={{ fontSize: 12, gap: 4 }}>
+            <Sparkles size={13} color="var(--terracotta)" /> Аутентичные практики
+          </span>
+        </div>
+        <h1 style={{ fontSize: 30, fontWeight: 900, margin: "0 0 16px", letterSpacing: -0.7, color: "var(--ink)" }}>
+          Впечатления в Оше
+        </h1>
+        <div className="search">
+          <Search size={18} color="#9e958c" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Поиск практик, экскурсий и вкусов…"
+          />
+        </div>
+        {!userLocation && (
+          <button className="cta ghost" style={{ marginTop: 12, fontSize: 13, padding: "10px 14px", borderRadius: 14 }} onClick={onEnableGeo}>
+            <span className="row" style={{ justifyContent: "center", gap: 6 }}>
+              <Navigation size={14} color="var(--terracotta)" /> Показать, что рядом со мной
+            </span>
+          </button>
+        )}
+      </div>
+
+      <div className="h-scroll" style={{ paddingTop: 16 }}>
+        {CATEGORIES.map((c) => (
+          <button key={c.id} className={`pill ${category === c.id ? "on" : ""}`} onClick={() => setCategory(c.id)}>
+            {c.emoji} {c.label}
+          </button>
+        ))}
+      </div>
+
+      {category === "all" && !query && (
+        <>
+          <div style={{ padding: "8px 18px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>Практики: делай своими руками</div>
+              <div className="muted" style={{ fontSize: 12 }}>Мастер-классы с местными ремесленниками</div>
+            </div>
+            <button className="pill" style={{ padding: "5px 12px", fontSize: 12 }} onClick={() => setCategory("practices")}>Все</button>
+          </div>
+          <div className="h-scroll">
+            {practices.map((exp) => (
+              <ExperienceCard key={exp.id} exp={exp} saved={saved.has(exp.id)} onOpen={onOpen} onToggleSave={onToggleSave} compact />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ padding: "14px 18px 10px" }}>
+        <b style={{ fontSize: 16 }}>{query || category !== "all" ? "Результаты поиска" : "Популярные впечатления"}</b>
+      </div>
+      <div style={{ padding: "0 18px 24px", display: "grid", gap: 16 }}>
+        {filtered.length === 0 && <div className="empty">Ничего не нашли. Смените фильтр или запрос.</div>}
+        {filtered.map((exp) => (
+          <ExperienceCard key={exp.id} exp={exp} saved={saved.has(exp.id)} onOpen={onOpen} onToggleSave={onToggleSave} />
+        ))}
+      </div>
+
+      {!query && category === "all" && (
+        <div style={{ padding: "0 18px 30px" }}>
+          <b style={{ fontSize: 16 }}>Знаковые места города</b>
+          <div style={{ display: "flex", gap: 12, marginTop: 14, overflowX: "auto", paddingBottom: 4 }}>
+            {ATTRACTIONS.map((a) => (
+              <div key={a.id} className="card" style={{ minWidth: 168 }}>
+                <img src={a.image} alt="" style={{ height: 100, width: "100%", objectFit: "cover" }} />
+                <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: "var(--ink)" }}>{a.name}</div>
+                  <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{a.hint}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Detail({ exp, saved, onBack, onToggleSave, onBook }) {
+  return (
+    <div className="gyg-scroll" style={{ background: "#fff", minHeight: "100svh" }}>
+      <div style={{ position: "relative" }}>
+        <img src={exp.image} alt="" style={{ height: 260, width: "100%", objectFit: "cover" }} />
+        <button className="icon-btn" style={{ position: "absolute", top: 14, left: 14 }} onClick={onBack}>
+          <ChevronLeft size={20} />
+        </button>
+        <button className="icon-btn" style={{ position: "absolute", top: 14, right: 14 }} onClick={() => onToggleSave(exp.id)}>
+          <Heart size={18} fill={saved ? "#c85a32" : "none"} color={saved ? "#c85a32" : "#2b2520"} />
+        </button>
+      </div>
+      <div style={{ padding: "20px 18px" }}>
+        <div className="muted" style={{ fontWeight: 700, fontSize: 12, letterSpacing: "0.2px" }}>{exp.type.toUpperCase()} · {exp.place}</div>
+        <h2 style={{ fontSize: 23, fontWeight: 900, margin: "6px 0 12px", lineHeight: 1.25, letterSpacing: -0.4 }}>{exp.title}</h2>
+        <div className="row" style={{ gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
+          <StarRow rating={exp.rating} />
+          <span className="muted">{exp.reviews} отзывов</span>
+          <span className="row muted"><Clock size={14} /> {exp.duration}</span>
+        </div>
+        {exp.freeCancel && (
+          <div style={{ color: "var(--green)", fontWeight: 700, fontSize: 13, marginBottom: 18, display: "flex", alignItems: "center", gap: 6 }}>
+            <Check size={16} strokeWidth={2.5} /> Бесплатная отмена за 24 часа
+          </div>
+        )}
+        <p style={{ margin: "0 0 18px", color: "#38312b", lineHeight: 1.6, fontSize: 15 }}>{exp.description}</p>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Что вас ждёт</div>
+        <ul style={{ paddingLeft: 20, margin: "0 0 20px", color: "var(--ink-soft)" }}>
+          {exp.highlights.map((h) => <li key={h} style={{ marginBottom: 6 }}>{h}</li>)}
+        </ul>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Что включено</div>
+        <ul style={{ paddingLeft: 20, margin: "0 0 20px", color: "var(--ink-soft)" }}>
+          {exp.includes.map((h) => <li key={h} style={{ marginBottom: 6 }}>{h}</li>)}
+        </ul>
+        <div className="muted" style={{ marginBottom: 10, fontSize: 13 }}>Языки: {exp.lang} · Группа: {exp.group}</div>
+        <div className="row" style={{ marginBottom: 8, gap: 6 }}><MapPin size={16} color="var(--terracotta)" /> <b>Точка сбора</b></div>
+        <div className="muted" style={{ marginBottom: 12 }}>{exp.meeting}</div>
+        <MiniMap lat={exp.lat} lng={exp.lng} label={exp.place} />
+      </div>
+      <div style={{
+        position: "sticky", bottom: 0, background: "rgba(255, 255, 255, 0.88)", backdropFilter: "blur(20px)",
+        borderTop: "1px solid var(--line)", padding: "14px 18px calc(14px + env(safe-area-inset-bottom))",
+        display: "flex", alignItems: "center", gap: 14, zIndex: 30,
+      }}>
+        <div>
+          <div className="muted" style={{ fontSize: 11 }}>от человека</div>
+          <div className="price" style={{ fontSize: 22 }}>${exp.price}</div>
+        </div>
+        <button className="cta" onClick={() => onBook(exp)}>Выбрать дату</button>
+      </div>
+    </div>
+  );
+}
+
+function Booking({ exp, onBack, onConfirm }) {
+  const dates = useMemo(() => upcomingDates(), []);
+  const [date, setDate] = useState(dates[1]?.key || dates[0].key);
+  const [guests, setGuests] = useState(2);
+  const total = exp.price * guests;
+
+  return (
+    <div className="gyg-scroll" style={{ background: "#fff", minHeight: "100svh" }}>
+      <div className="screen-head">
+        <button className="icon-btn" onClick={onBack}><ChevronLeft size={20} /></button>
+        <b style={{ fontSize: 16 }}>Бронирование впечатления</b>
+      </div>
+      <div style={{ padding: "18px" }}>
+        <div className="muted" style={{ fontWeight: 700, marginBottom: 8 }}>{exp.title}</div>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Дата визита</div>
+        <div className="h-scroll" style={{ padding: "10px 0 16px" }}>
+          {dates.map((d) => (
+            <button key={d.key} className={`date-chip ${date === d.key ? "on" : ""}`} onClick={() => setDate(d.key)}>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>{d.label}</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "var(--ink)", marginTop: 2 }}>{d.num}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Количество участников</div>
+        <div className="row" style={{
+          justifyContent: "space-between", margin: "10px 0 20px", background: "var(--sand-100)",
+          borderRadius: 16, padding: "12px 14px", border: "1px solid var(--sand-200)",
+        }}>
+          <span className="row" style={{ fontWeight: 700 }}>
+            <Users size={18} color="var(--terracotta)" /> {guests} {guests === 1 ? "гость" : "гостя"}
+          </span>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="icon-btn" onClick={() => setGuests((g) => Math.max(1, g - 1))}>−</button>
+            <button className="icon-btn" onClick={() => setGuests((g) => Math.min(10, g + 1))}>+</button>
+          </div>
+        </div>
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 18, padding: "4px 2px" }}>
+          <span style={{ fontSize: 15, color: "var(--muted)" }}>Итого к оплате</span>
+          <b style={{ fontSize: 22, color: "var(--terracotta-dark)" }}>${total}</b>
+        </div>
+        <button className="cta" onClick={() => onConfirm({ exp, date, guests, total, code: makeCode() })}>
+          Подтвердить · ${total}
+        </button>
+        <p className="muted" style={{ marginTop: 14, fontSize: 12, textAlign: "center", lineHeight: 1.4 }}>
+          Тестовый режим: оплата не требуется. Ваш билет появится в разделе «Билеты».
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function TicketView({ booking, onClose }) {
+  const exp = booking.exp;
+  return (
+    <div className="gyg-scroll" style={{ background: "#fff", minHeight: "100svh" }}>
+      <div className="screen-head">
+        <button className="icon-btn" onClick={onClose}><ChevronLeft size={20} /></button>
+        <b style={{ fontSize: 16 }}>Электронный билет</b>
+      </div>
+      <div style={{ padding: "20px 18px" }}>
+        <div className="ticket" style={{ border: "1px solid var(--sand-200)", boxShadow: "0 10px 30px rgba(45,32,22,0.08)" }}>
+          <div className="row" style={{ color: "var(--green)", fontWeight: 800, marginBottom: 10, fontSize: 14 }}>
+            <Check size={18} strokeWidth={2.5} /> Бронирование подтверждено
+          </div>
+          <div style={{ fontWeight: 900, fontSize: 19, marginBottom: 10, lineHeight: 1.3 }}>{exp.title}</div>
+          <div className="muted" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Calendar size={15} color="var(--terracotta)" /> {booking.date} · {booking.guests} участника
+          </div>
+          <div className="muted" style={{ margin: "10px 0", display: "flex", alignItems: "center", gap: 6 }}>
+            <MapPin size={15} color="var(--terracotta)" /> {exp.meeting}
+          </div>
+          <div style={{
+            marginTop: 20, padding: 14, background: "linear-gradient(135deg, #1f1b18 0%, #342a22 100%)",
+            color: "#fff", borderRadius: 14, textAlign: "center", letterSpacing: 2.5, fontWeight: 800, fontSize: 16,
+            boxShadow: "0 6px 18px rgba(31,27,24,0.25)",
+          }}>
+            {booking.code}
+          </div>
+        </div>
+
+        <button className="cta ghost" style={{ marginTop: 16 }} onClick={onClose}>
+          Вернуться к билетам
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
-    const [tab, setTab] = useState("home");
-    const [visited, setVisited] = useState({});
-    const [completedTasks, setCompletedTasks] = useState({});
-    const [totalXP, setTotalXP] = useState(310);
-    const [selectedPlace, setSelectedPlace] = useState(null);
-    const [mapPlace, setMapPlace] = useState(null);
-    const [splash, setSplash] = useState(true);
-    const [splashExit, setSplashExit] = useState(false);
-    const [calMonth, setCalMonth] = useState(5);
-    const [calYear, setCalYear] = useState(2026);
-    const [selectedDay, setSelectedDay] = useState(null);
-    const [userLocation, setUserLocation] = useState(null);
-    const [geoStatus, setGeoStatus] = useState("Определяем геопозицию...");
-    const streak = 3;
-    const visitedCount = Object.keys(visited).length;
-    const heroSwipeRef = useRef(null);
-    const [heroWidget, setHeroWidget] = useState(0);
+  const [tab, setTab] = useState("map");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [saved, setSaved] = useState(() => new Set());
+  const [selected, setSelected] = useState(null);
+  const [bookingExp, setBookingExp] = useState(null);
+  const [ticket, setTicket] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+  const [geoError, setGeoError] = useState("");
+  const [askGeo, setAskGeo] = useState(false);
+  const [mapSelected, setMapSelected] = useState(EXPERIENCES[0].id);
+  const watchRef = useRef(null);
 
-    useEffect(() => {
-        const t1 = setTimeout(() => setSplashExit(true), 2400);
-        const t2 = setTimeout(() => setSplash(false), 3000);
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-        };
-    }, []);
+  const savedList = EXPERIENCES.filter((e) => saved.has(e.id));
+  const mapItem = EXPERIENCES.find((e) => e.id === mapSelected) || EXPERIENCES[0];
 
-    useEffect(() => {
-        if (!navigator.geolocation) {
-            setGeoStatus("Геопозиция недоступна в этом браузере");
-            return;
-        }
+  function toggleSave(id) {
+    setSaved((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-        const watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    accuracy: Math.round(position.coords.accuracy),
-                });
-                setGeoStatus("Геопозиция активна");
-            },
-            (error) => {
-                if (error.code === error.PERMISSION_DENIED) {
-                    setGeoStatus("Разреши доступ к геопозиции");
-                } else {
-                    setGeoStatus("Не удалось получить геопозицию");
-                }
-            },
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
-        );
+  // Сброс всех модальных состояний при смене вкладки таббара
+  function handleTabChange(nextTab) {
+    setTicket(null);
+    setBookingExp(null);
+    setSelected(null);
+    setTab(nextTab);
+  }
 
-        return () => navigator.geolocation.clearWatch(watchId);
-    }, []);
-
-    function toggleTask(placeId, taskIdx) {
-        const key = `${placeId}-${taskIdx}`;
-        const done = completedTasks[key];
-        setCompletedTasks((p) => ({ ...p, [key]: !done }));
-
-        const place = PLACES.find((p) => p.id === placeId);
-        const xpPer = Math.floor(place.xp / place.tasks.length);
-        setTotalXP((p) => p + (done ? -xpPer : xpPer));
-
-        if (!visited[placeId]) setVisited((p) => ({ ...p, [placeId]: true }));
+  function requestGeo() {
+    setGeoError("");
+    if (!navigator.geolocation) {
+      setGeoError("Геолокация недоступна в этом браузере");
+      return;
     }
-
-    const levelInfo =
-        totalXP < 100
-            ? { level: 1, title: "Турист", next: 100 }
-            : totalXP < 300
-                ? { level: 2, title: "Путешественник", next: 300 }
-                : totalXP < 600
-                    ? { level: 3, title: "Знаток", next: 600 }
-                    : { level: 4, title: "Легенда Оша", next: 600 };
-
-    const levelProgress = Math.min((totalXP / levelInfo.next) * 100, 100);
-    const maxSteps = Math.max(...STEPS_DATA.map((d) => d.steps));
-
-    function getDaysInMonth(y, m) {
-        return new Date(y, m + 1, 0).getDate();
-    }
-
-    function getFirstDay(y, m) {
-        let d = new Date(y, m, 1).getDay();
-        return d === 0 ? 6 : d - 1;
-    }
-
-    const daysInMonth = getDaysInMonth(calYear, calMonth);
-    const firstDay = getFirstDay(calYear, calMonth);
-
-    function prevMonth() {
-        if (calMonth === 0) {
-            setCalMonth(11);
-            setCalYear((y) => y - 1);
-        } else {
-            setCalMonth((m) => m - 1);
-        }
-        setSelectedDay(null);
-    }
-
-    function nextMonth() {
-        if (calMonth === 11) {
-            setCalMonth(0);
-            setCalYear((y) => y + 1);
-        } else {
-            setCalMonth((m) => m + 1);
-        }
-        setSelectedDay(null);
-    }
-
-    return (
-        <div style={{ fontFamily: "'Segoe UI',sans-serif", background: "#F5F0EB", minHeight: "100vh", width: "100%", maxWidth: 420, margin: "0 auto", position: "relative", overflowX: "hidden" }}>
-            <style>{`
-        *{box-sizing:border-box}
-        html,body,#root{margin:0;width:100%;min-height:100%;background:#F5F0EB}
-        body{overflow-x:hidden}
-        @keyframes drop1{0%{transform:translate(-80px,-100px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes drop2{0%{transform:translate(80px,-80px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes drop3{0%{transform:translate(-60px,90px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes drop4{0%{transform:translate(70px,80px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes drop5{0%{transform:translate(0,-120px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes drop6{0%{transform:translate(-100px,20px) scale(0.2);opacity:0}70%{opacity:1}100%{transform:translate(0,0) scale(1);opacity:1}}
-        @keyframes titleIn{0%{opacity:0;transform:translateY(24px)}100%{opacity:1;transform:translateY(0)}}
-        @keyframes splashOut{0%{opacity:1}100%{opacity:0}}
-        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 #E86A2A44}50%{box-shadow:0 0 0 16px #E86A2A00}}
-      `}</style>
-
-            {splash && (
-                <div style={{ position: "fixed", inset: 0, zIndex: 999, background: "#0D0500", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: splashExit ? "splashOut 0.6s ease forwards" : "none" }}>
-                    <div style={{ position: "relative", width: 130, height: 130, marginBottom: 36 }}>
-                        {[
-                            { top: "8%", left: "42%", size: 20, delay: "0s", anim: "drop1" },
-                            { top: "15%", left: "8%", size: 16, delay: "0.12s", anim: "drop2" },
-                            { top: "60%", left: "2%", size: 14, delay: "0.22s", anim: "drop3" },
-                            { top: "65%", left: "58%", size: 18, delay: "0.08s", anim: "drop4" },
-                            { top: "30%", left: "68%", size: 22, delay: "0.18s", anim: "drop5" },
-                            { top: "38%", left: "28%", size: 48, delay: "0.35s", anim: "drop6" },
-                        ].map((d, i) => (
-                            <div key={i} style={{ position: "absolute", top: d.top, left: d.left, width: d.size, height: d.size, borderRadius: "50% 50% 50% 0", transform: "rotate(-45deg)", background: "linear-gradient(135deg,#FF9500,#E86A2A,#C84A0A)", boxShadow: "0 0 12px #E86A2A66", animation: `${d.anim} 0.9s cubic-bezier(.36,1.3,.5,1) ${d.delay} both` }} />
-                        ))}
-                        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 60, height: 60, borderRadius: "50%", background: "radial-gradient(circle,#E86A2A44,transparent)", animation: "pulse 1.5s ease 0.8s infinite" }} />
-                    </div>
-
-                    <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: 4, textTransform: "uppercase", color: "white", animation: "titleIn 0.7s ease 1.1s both" }}>
-                        <span style={{ color: "#E86A2A" }}>OSH</span>{" "}
-                        <span style={{ color: "white" }}>EXPLORER</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 10, letterSpacing: 4, textTransform: "uppercase", animation: "titleIn 0.7s ease 1.4s both" }}>ОТКРЫВАЙ СВОЙ ГОРОД</div>
-                </div>
-            )}
-
-            {selectedPlace && (
-                <div onClick={() => setSelectedPlace(null)} style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-                    <div onClick={(e) => e.stopPropagation()} style={{ background: "white", borderRadius: "24px 24px 0 0", width: "100%", maxWidth: 420, padding: 24, maxHeight: "80vh", overflowY: "auto" }}>
-                        <div style={{ width: 40, height: 4, background: "#E0E0E0", borderRadius: 2, margin: "0 auto 20px" }} />
-
-                        <div style={{ display: "flex", gap: 14, marginBottom: 16, alignItems: "center" }}>
-                            <div style={{ width: 60, height: 60, borderRadius: 18, background: selectedPlace.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, flexShrink: 0 }}>{selectedPlace.emoji}</div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 20, fontWeight: 900 }}>{selectedPlace.name}</div>
-                                <div style={{ fontSize: 13, color: selectedPlace.color, fontWeight: 600 }}>{selectedPlace.category} · +{selectedPlace.xp} XP</div>
-                            </div>
-                            <button onClick={() => { setSelectedPlace(null); setMapPlace(selectedPlace); }} style={{ background: selectedPlace.bg, border: "none", borderRadius: 12, padding: "8px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700, color: selectedPlace.color }}>🗺️ Карта</button>
-                        </div>
-
-                        {selectedPlace.tasks.map((task, i) => {
-                            const done = completedTasks[`${selectedPlace.id}-${i}`];
-
-                            return (
-                                <div key={i} onClick={() => toggleTask(selectedPlace.id, i)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", background: done ? selectedPlace.bg : "#F8F8F8", borderRadius: 14, marginBottom: 8, cursor: "pointer", border: `2px solid ${done ? selectedPlace.color : "transparent"}` }}>
-                                    <div style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, background: done ? selectedPlace.color : "#E0E0E0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        {done && <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>✓</span>}
-                                    </div>
-                                    <span style={{ fontSize: 14, color: done ? selectedPlace.color : "#444", fontWeight: done ? 600 : 400 }}>{task}</span>
-                                </div>
-                            );
-                        })}
-
-                        <button onClick={() => setSelectedPlace(null)} style={{ width: "100%", padding: 14, background: selectedPlace.color, color: "white", border: "none", borderRadius: 16, fontSize: 16, fontWeight: 700, marginTop: 8, cursor: "pointer" }}>Закрыть</button>
-                    </div>
-                </div>
-            )}
-
-            {mapPlace && (
-                <MapModal
-                    place={mapPlace}
-                    userLocation={userLocation}
-                    completedTasks={completedTasks}
-                    onToggleTask={toggleTask}
-                    onClose={() => setMapPlace(null)}
-                />
-            )}
-
-            <div style={{ width: "100%", overflowY: "auto", overflowX: "hidden", paddingBottom: 80 }}>
-                {tab === "home" && (
-                    <div>
-                        <div style={{ background: "linear-gradient(160deg,#0D0500,#2A1500,#7C3A1A)", padding: "32px 20px 28px" }}>
-                            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>Понедельник, 23 июня</div>
-                            <div style={{ fontSize: 26, fontWeight: 900, color: "white", marginBottom: 2 }}>Привет, исследователь 👋</div>
-                            <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginBottom: 20 }}>Ош ждёт тебя сегодня</div>
-
-                            <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#E86A2A,#D4A03A)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 900, fontSize: 13 }}>{levelInfo.level}</div>
-                                        <div>
-                                            <div style={{ color: "white", fontWeight: 700, fontSize: 13 }}>{levelInfo.title}</div>
-                                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{totalXP}/{levelInfo.next} XP</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: "flex", gap: 16 }}>
-                                        <div style={{ textAlign: "center" }}>
-                                            <div style={{ color: "#FF6B35", fontWeight: 900, fontSize: 18 }}>🔥{streak}</div>
-                                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>стрик</div>
-                                        </div>
-                                        <div style={{ textAlign: "center" }}>
-                                            <div style={{ color: "#A78BFA", fontWeight: 900, fontSize: 18 }}>📍{visitedCount}</div>
-                                            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>мест</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ height: 8, background: "rgba(255,255,255,0.12)", borderRadius: 4, overflow: "hidden" }}>
-                                    <div style={{ height: "100%", width: `${levelProgress}%`, background: "linear-gradient(90deg,#E86A2A,#D4A03A)", borderRadius: 4, transition: "width .5s" }} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: "20px 16px 0" }}>
-                            <div style={{ overflow: "hidden", marginBottom: 20 }}>
-                                <div
-                                    style={{ display: "flex", transition: "transform 0.35s cubic-bezier(.4,0,.2,1)", transform: `translateX(${heroWidget === 0 ? "0" : "-100%"})` }}
-                                    onTouchStart={(e) => { heroSwipeRef.current = e.touches[0].clientX; }}
-                                    onTouchEnd={(e) => {
-                                        const diff = heroSwipeRef.current - e.changedTouches[0].clientX;
-                                        if (diff > 40) setHeroWidget(1);
-                                        if (diff < -40) setHeroWidget(0);
-                                    }}
-                                >
-                                    <div style={{ minWidth: "100%", background: "linear-gradient(135deg,#E86A2A,#C85A1A)", borderRadius: 20, padding: "18px", display: "flex", alignItems: "center", gap: 16 }}>
-                                        <div style={{ fontSize: 40 }}>🌅</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 2 }}>Задание дня</div>
-                                            <div style={{ color: "white", fontWeight: 800, fontSize: 16, marginBottom: 2 }}>Утренний Ош</div>
-                                            <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 12 }}>Посети 2 места до 9:00 · +200 XP</div>
-                                        </div>
-
-                                    </div>
-
-                                    <div style={{ minWidth: "100%", background: "linear-gradient(135deg,#1A1A2E,#3A2A5A)", borderRadius: 20, padding: "18px", display: "flex", alignItems: "center", gap: 16 }}>
-                                        <div style={{ fontSize: 40 }}>🏆</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 2 }}>Испытание недели</div>
-                                            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>Посети 5 мест · +500 XP бонус</div>
-                                            <div style={{ marginTop: 8, height: 5, background: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" }}>
-                                                <div style={{ height: "100%", width: `${(visitedCount / 5) * 100}%`, background: "linear-gradient(90deg,#A78BFA,#7C5CDA)", borderRadius: 3 }} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 8 }}>
-                                    {[0, 1].map((i) => (
-                                        <div key={i} onClick={() => setHeroWidget(i)} style={{ width: i === heroWidget ? 16 : 6, height: 6, borderRadius: 3, background: i === heroWidget ? "#E86A2A" : "#D0C8C0", cursor: "pointer", transition: "all .3s" }} />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 14, color: "#1A1A1A" }}>Рекомендуем сегодня</div>
-
-                            {PLACES.filter((p) => !p.locked).map((place) => (
-                                <div key={place.id} onClick={() => setSelectedPlace(place)} style={{ background: "white", borderRadius: 20, padding: 16, marginBottom: 12, cursor: "pointer", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                                    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                                        <div style={{ width: 56, height: 56, borderRadius: 16, background: place.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{place.emoji}</div>
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ fontWeight: 800, fontSize: 16 }}>{place.name}</div>
-                                            <div style={{ fontSize: 12, color: place.color, fontWeight: 600, marginBottom: 6 }}>{place.category} · +{place.xp} XP</div>
-                                            <div style={{ height: 5, background: "#F0F0F0", borderRadius: 3, overflow: "hidden" }}>
-                                                <div style={{ height: "100%", width: `${(place.tasks.filter((_, i) => completedTasks[`${place.id}-${i}`]).length / place.tasks.length) * 100}%`, background: place.color, borderRadius: 3, transition: "width .5s" }} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            <ActivityCard maxSteps={maxSteps} />
-                        </div>
-                    </div>
-                )}
-
-                {tab === "map" && (
-                    <div style={{ padding: "20px 16px" }}>
-                        <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 4 }}>Карта Оша</div>
-                        <div style={{ color: "#888", fontSize: 13, marginBottom: 12 }}>Нажми на место чтобы открыть карту</div>
-
-                        <div style={{ background: userLocation ? "#E6F7F4" : "#FFF4E6", borderRadius: 14, padding: "10px 12px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: userLocation ? "#2E7D6E" : "#E86A2A", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>📍</div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 13, fontWeight: 800, color: userLocation ? "#2E7D6E" : "#9A5A1A" }}>{geoStatus}</div>
-                                {userLocation && <div style={{ fontSize: 11, color: "#777", marginTop: 1 }}>Точность примерно {userLocation.accuracy} м</div>}
-                            </div>
-                        </div>
-
-                        {PLACES.map((place, i) => {
-                            const isVisited = visited[place.id];
-                            const isLeft = i % 2 === 0;
-
-                            return (
-                                <div key={place.id} onClick={() => !place.locked && setMapPlace(place)} style={{ display: "flex", flexDirection: isLeft ? "row" : "row-reverse", alignItems: "center", marginBottom: 40, position: "relative", cursor: place.locked ? "default" : "pointer" }}>
-                                    {i < PLACES.length - 1 && <div style={{ position: "absolute", [isLeft ? "left" : "right"]: 38, top: 80, width: 3, height: 56, background: isVisited ? place.color : "#E0D8D0", borderRadius: 2, zIndex: 0 }} />}
-
-                                    <div style={{ width: 80, height: 80, borderRadius: "50%", flexShrink: 0, background: place.locked ? "#E8E0D8" : isVisited ? `linear-gradient(135deg,${place.color},${place.color}BB)` : "white", border: `3px solid ${place.locked ? "#D0C8C0" : place.color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: place.locked ? 22 : 34, filter: place.locked ? "grayscale(1) opacity(0.5)" : "none", zIndex: 1, position: "relative", boxShadow: !place.locked ? `0 4px 16px ${place.color}44` : "none" }}>
-                                        {place.locked ? "🔒" : place.emoji}
-                                        {isVisited && <div style={{ position: "absolute", top: -4, right: -4, background: "#22C55E", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 700, border: "2px solid white" }}>✓</div>}
-                                    </div>
-
-                                    <div style={{ flex: 1, margin: isLeft ? "0 0 0 16px" : "0 16px 0 0", background: "white", borderRadius: 16, padding: "12px 14px", opacity: place.locked ? 0.5 : 1, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-                                        <div style={{ fontWeight: 800, fontSize: 14 }}>{place.name}</div>
-                                        <div style={{ fontSize: 11, color: place.locked ? "#aaa" : place.color, fontWeight: 600, marginTop: 2 }}>
-                                            {place.locked ? "Закрыто" : `+${place.xp} XP · ${place.category}`}
-                                        </div>
-                                        {!place.locked && <div style={{ marginTop: 6, fontSize: 11, color: "#888" }}>карта и задания →</div>}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                {tab === "community" && (
-                    <div style={{ padding: "20px 16px" }}>
-                        <div style={{ fontWeight: 900, fontSize: 22, marginBottom: 4 }}>Сообщество</div>
-                        <div style={{ color: "#888", fontSize: 13, marginBottom: 20 }}>Что исследуют другие</div>
-
-                        {[
-                            { user: "Айгерим", avatar: "👩", place: "Сулайман-Тоо", emoji: "⛰️", likes: 14, color: "#7C5C3A", time: "2 часа назад" },
-                            { user: "Бакыт", avatar: "👦", place: "Базар Джайма", emoji: "🛒", likes: 8, color: "#2E7D6E", time: "5 часов назад" },
-                            { user: "Нурзат", avatar: "👩", place: "Мечеть Равзат", emoji: "🕌", likes: 21, color: "#5B4A8A", time: "вчера" },
-                            { user: "Эрлан", avatar: "👦", place: "Старый город", emoji: "🏘️", likes: 6, color: "#9A5A1A", time: "вчера" },
-                        ].map((post, idx) => (
-                            <div key={idx} style={{ background: "white", borderRadius: 20, marginBottom: 12, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                                <div style={{ height: 160, background: `linear-gradient(160deg,${post.color}22,${post.color}77)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 64, position: "relative" }}>
-                                    {post.emoji}
-                                    <div style={{ position: "absolute", bottom: 10, left: 12, background: "rgba(0,0,0,0.45)", borderRadius: 10, padding: "4px 10px", color: "white", fontSize: 11, fontWeight: 600 }}>{post.place}</div>
-                                </div>
-
-                                <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                        <div style={{ fontSize: 26 }}>{post.avatar}</div>
-                                        <div>
-                                            <div style={{ fontWeight: 700, fontSize: 14 }}>{post.user}</div>
-                                            <div style={{ fontSize: 11, color: "#888" }}>{post.time}</div>
-                                        </div>
-                                    </div>
-                                    <div style={{ color: "#888", fontWeight: 700, fontSize: 13 }}>🤍 {post.likes}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {tab === "profile" && (
-                    <div>
-                        <div style={{ background: "linear-gradient(160deg,#0D0500,#2A1500,#3A2A5A)", padding: "28px 20px 24px", textAlign: "center" }}>
-                            <div style={{ width: 76, height: 76, borderRadius: "50%", background: "linear-gradient(135deg,#E86A2A,#5B4A8A)", margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38, boxShadow: "0 0 24px #E86A2A55" }}>🧭</div>
-                            <div style={{ fontWeight: 900, fontSize: 22, color: "white", marginBottom: 2 }}>Исследователь</div>
-                            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, marginBottom: 20 }}>Уровень {levelInfo.level} · {levelInfo.title}</div>
-
-                            <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 14, padding: "12px 16px", border: "1px solid rgba(255,255,255,0.1)" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>до следующего уровня</span>
-                                    <span style={{ fontSize: 12, color: "#E86A2A", fontWeight: 700 }}>{levelInfo.next - totalXP} XP</span>
-                                </div>
-                                <div style={{ height: 8, background: "rgba(255,255,255,0.12)", borderRadius: 4, overflow: "hidden" }}>
-                                    <div style={{ height: "100%", width: `${levelProgress}%`, background: "linear-gradient(90deg,#E86A2A,#D4A03A)", borderRadius: 4 }} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ padding: "20px 16px 0" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
-                                {[
-                                    { emoji: "📍", value: visitedCount, label: "Мест" },
-                                    { emoji: "⚡", value: totalXP, label: "XP" },
-                                    { emoji: "🔥", value: streak, label: "Стрик" },
-                                ].map((s) => (
-                                    <div key={s.label} style={{ background: "white", borderRadius: 16, padding: "14px 10px", textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-                                        <div style={{ fontSize: 24 }}>{s.emoji}</div>
-                                        <div style={{ fontWeight: 900, fontSize: 22, color: "#1A1A1A" }}>{s.value}</div>
-                                        <div style={{ fontSize: 11, color: "#888" }}>{s.label}</div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 12, color: "#1A1A1A" }}>Мои прогулки</div>
-
-                            <div style={{ background: "white", borderRadius: 20, padding: 16, marginBottom: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                                    <button onClick={prevMonth} style={{ background: "#F0EBE3", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 16 }}>‹</button>
-                                    <div style={{ fontWeight: 800, fontSize: 15 }}>{MONTHS[calMonth]} {calYear}</div>
-                                    <button onClick={nextMonth} style={{ background: "#F0EBE3", border: "none", borderRadius: 10, width: 34, height: 34, cursor: "pointer", fontSize: 16 }}>›</button>
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2, marginBottom: 4 }}>
-                                    {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((d, i) => (
-                                        <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: i >= 5 ? "#E86A2A" : "#888", paddingBottom: 6 }}>{d}</div>
-                                    ))}
-                                </div>
-
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 2 }}>
-                                    {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
-                                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                                        const isWeekend = ((day + firstDay - 1) % 7) >= 5;
-                                        const hasVisit = VISITED_DAYS.includes(day) && calMonth === 5 && calYear === 2026;
-                                        const isSelected = selectedDay === day;
-                                        const isToday = day === 23 && calMonth === 5 && calYear === 2026;
-
-                                        return (
-                                            <div key={day} onClick={() => hasVisit && setSelectedDay(isSelected ? null : day)} style={{
-                                                aspectRatio: "1",
-                                                borderRadius: 10,
-                                                background: hasVisit ? "linear-gradient(135deg,#E86A2A,#D4A03A)" : isToday ? "#F0EBE3" : "transparent",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                fontSize: 12,
-                                                fontWeight: isToday || hasVisit ? 800 : 400,
-                                                color: hasVisit ? "white" : isWeekend ? "#E86A2A" : isToday ? "#E86A2A" : "#333",
-                                                cursor: hasVisit ? "pointer" : "default",
-                                                border: isToday && !hasVisit ? "2px solid #E86A2A" : isSelected ? "2px solid #E86A2A" : "2px solid transparent",
-                                            }}>
-                                                {hasVisit ? "⛰️" : day}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {selectedDay && (
-                                    <div style={{ marginTop: 12, background: "#FFF4E6", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                                        <div style={{ fontSize: 28 }}>⛰️</div>
-                                        <div>
-                                            <div style={{ fontWeight: 700, fontSize: 13 }}>Сулайман-Тоо</div>
-                                            <div style={{ fontSize: 11, color: "#888" }}>{selectedDay} {MONTHS[calMonth]} · +150 XP · 📸 Фото сохранено</div>
-                                        </div>
-                                        <button onClick={() => setSelectedDay(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: "#AAA", fontSize: 16, cursor: "pointer" }}>✕</button>
-                                    </div>
-                                )}
-
-                                <div style={{ marginTop: 12, display: "flex", gap: 12, fontSize: 11, color: "#888" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                        <div style={{ width: 10, height: 10, borderRadius: 3, background: "linear-gradient(135deg,#E86A2A,#D4A03A)" }} />
-                                        посещение
-                                    </div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                        <div style={{ width: 10, height: 10, borderRadius: 3, border: "2px solid #E86A2A" }} />
-                                        сегодня
-                                    </div>
-
-                                </div>
-                            </div>
-
-                            <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 12, color: "#1A1A1A" }}>Настройки</div>
-
-                            <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-                                {["🔔 Уведомления", "🌐 Язык", "🔒 Приватность", "❓ Помощь", "⭐ Оценить приложение"].map((item, i, arr) => (
-                                    <div key={item} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: i < arr.length - 1 ? "1px solid #F5F0EB" : "none", cursor: "pointer" }}>
-                                        <span style={{ fontSize: 14, fontWeight: 500 }}>{item}</span>
-                                        <span style={{ color: "#CCC", fontSize: 18 }}>›</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "white", boxShadow: "0 -4px 24px rgba(0,0,0,0.1)", display: "flex", borderTop: "1px solid #F0EBE3", zIndex: 40 }}>
-                {TABS.map((t) => (
-                    <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 0 8px", background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                        <span style={{ fontSize: 22 }}>{t.emoji}</span>
-                        <span style={{ fontSize: 10, fontWeight: tab === t.id ? 800 : 400, color: tab === t.id ? "#E86A2A" : "#888" }}>{t.label}</span>
-                        {tab === t.id && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#ec621c" }} />}
-                    </button>
-                ))}
-            </div>
-        </div>
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserLocation(loc);
+        setAskGeo(false);
+        if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current);
+        watchRef.current = navigator.geolocation.watchPosition((p) => {
+          setUserLocation({ lat: p.coords.latitude, lng: p.coords.longitude });
+        });
+      },
+      () => setGeoError("Не удалось получить местоположение. Разрешите доступ в браузере."),
+      { enableHighAccuracy: true, timeout: 12000 }
     );
-}
+  }
 
+  useEffect(() => () => { if (watchRef.current) navigator.geolocation.clearWatch(watchRef.current); }, []);
+
+  function confirmBooking(entry) {
+    setBookings((b) => [entry, ...b]);
+    setBookingExp(null);
+    setSelected(null);
+    setTicket(entry);
+    setTab("bookings");
+  }
+
+  return (
+    <div className="gyg-app">
+      {/* Если открыт просмотр билета */}
+      {ticket ? (
+        <TicketView booking={ticket} onClose={() => setTicket(null)} />
+      ) : bookingExp ? (
+        /* Экран оформления брони */
+        <Booking exp={bookingExp} onBack={() => setBookingExp(null)} onConfirm={confirmBooking} />
+      ) : selected ? (
+        /* Детальный экран впечатления */
+        <Detail
+          exp={selected}
+          saved={saved.has(selected.id)}
+          onBack={() => setSelected(null)}
+          onToggleSave={toggleSave}
+          onBook={setBookingExp}
+        />
+      ) : (
+        /* Основные экраны вкладок */
+        <>
+          {tab === "home" && (
+            <Home
+              query={query}
+              setQuery={setQuery}
+              category={category}
+              setCategory={setCategory}
+              saved={saved}
+              onOpen={setSelected}
+              onToggleSave={toggleSave}
+              onEnableGeo={() => setAskGeo(true)}
+              userLocation={userLocation}
+            />
+          )}
+
+          {tab === "map" && (
+            <ExploreMap
+              items={EXPERIENCES}
+              selectedId={mapSelected}
+              onSelect={setMapSelected}
+              userLocation={userLocation}
+              footer={(
+                <div className="map-sheet">
+                  <div style={{ width: 34, height: 4, background: "rgba(122, 112, 103, 0.3)", borderRadius: 99, margin: "0 auto 10px" }} />
+
+                  <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                      Впечатления на карте Оша
+                    </span>
+                    <span className="badge" style={{ position: "static", padding: "3px 8px", fontSize: 10 }}>
+                      {EXPERIENCES.length} локаций
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 6, scrollbarWidth: "none" }}>
+                    {EXPERIENCES.map((exp) => {
+                      const isCur = mapSelected === exp.id;
+                      return (
+                        <button
+                          key={exp.id}
+                          onClick={() => setMapSelected(exp.id)}
+                          className="sheet-pill-item"
+                          style={{
+                            border: isCur ? "2px solid var(--terracotta)" : "1px solid rgba(70, 50, 35, 0.08)",
+                            background: isCur ? "#fff9f6" : "rgba(255, 255, 255, 0.95)",
+                            boxShadow: isCur ? "0 6px 18px rgba(200, 90, 50, 0.16)" : "0 2px 6px rgba(45, 32, 22, 0.03)",
+                          }}
+                        >
+                          <div className="row" style={{ justifyContent: "space-between", marginBottom: 4 }}>
+                            <span className="muted" style={{ fontSize: 10, fontWeight: 700 }}>{exp.duration}</span>
+                            <StarRow rating={exp.rating} />
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: 13, color: "var(--ink)", lineHeight: 1.3, marginBottom: 6 }}>
+                            {exp.title}
+                          </div>
+                          <div className="row" style={{ justifyContent: "space-between" }}>
+                            <span className="muted" style={{ fontSize: 11 }}>{exp.place}</span>
+                            <b style={{ color: "var(--terracotta-dark)", fontSize: 13 }}>${exp.price}</b>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    className="cta"
+                    style={{ marginTop: 12, padding: "13px 16px" }}
+                    onClick={() => setSelected(mapItem)}
+                  >
+                    Подробнее о «{mapItem.place}»
+                  </button>
+                </div>
+              )}
+            />
+          )}
+
+          {tab === "saved" && (
+            <div className="gyg-scroll" style={{ padding: 18 }}>
+              <h2 style={{ margin: "8px 0 14px", fontWeight: 900, letterSpacing: -0.5 }}>Избранное</h2>
+              {savedList.length === 0 && (
+                <div className="empty">Сохраняйте практики и экскурсии сердцем на карточке — соберите персональный маршрут.</div>
+              )}
+              <div style={{ display: "grid", gap: 16 }}>
+                {savedList.map((exp) => (
+                  <ExperienceCard key={exp.id} exp={exp} saved onOpen={setSelected} onToggleSave={toggleSave} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "bookings" && (
+            <div className="gyg-scroll" style={{ padding: 18 }}>
+              <h2 style={{ margin: "8px 0 14px", fontWeight: 900, letterSpacing: -0.5 }}>Мои билеты</h2>
+              {bookings.length === 0 && (
+                <div className="empty">Пока нет забронированных практик. Выберите мастер-класс или экскурсию.</div>
+              )}
+              <div style={{ display: "grid", gap: 14 }}>
+                {bookings.map((b) => (
+                  <button
+                    key={b.code}
+                    className="ticket"
+                    style={{ textAlign: "left", cursor: "pointer", border: "1px solid var(--sand-200)", width: "100%" }}
+                    onClick={() => setTicket(b)}
+                  >
+                    <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{b.exp.title}</div>
+                    <div className="muted">{b.date} · {b.guests} участника · Код: {b.code}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "profile" && (
+            <div className="gyg-scroll" style={{ padding: 18 }}>
+              <h2 style={{ margin: "8px 0 8px", fontWeight: 900, letterSpacing: -0.5 }}>Профиль путешественника</h2>
+              <p className="muted" style={{ marginBottom: 18 }}>Osh Guide — аутентичные практики, ремёсла и экскурсии древнего Оша.</p>
+              <div className="card" style={{ padding: 18 }}>
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <span className="muted">Локация</span><b>Ош, Кыргызстан</b>
+                </div>
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+                  <span className="muted">Геолокация</span><b>{userLocation ? "Активна" : "Отключена"}</b>
+                </div>
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+                  <span className="muted">В избранном</span><b>{saved.size}</b>
+                </div>
+                <div className="row" style={{ justifyContent: "space-between", marginTop: 12 }}>
+                  <span className="muted">Бронирования</span><b>{bookings.length}</b>
+                </div>
+              </div>
+              {!userLocation && <button className="cta" style={{ marginTop: 18 }} onClick={() => setAskGeo(true)}>Включить геолокацию</button>}
+            </div>
+          )}
+        </>
+      )}
+
+      {askGeo && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(21,19,17,0.5)", backdropFilter: "blur(6px)", zIndex: 1300, display: "grid", placeItems: "end center" }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 430, borderRadius: "28px 28px 0 0", padding: "24px 20px" }}>
+            <b style={{ fontSize: 17 }}>Доступ к геолокации</b>
+            <p className="muted" style={{ margin: "8px 0 16px", lineHeight: 1.4 }}>
+              Позволит показать расстояние до ремесленных мастерских и отобразить ваше местоположение на карте.
+            </p>
+            {geoError && <p style={{ color: "var(--terracotta-dark)", fontSize: 13, marginBottom: 10 }}>{geoError}</p>}
+            <button className="cta" onClick={requestGeo}>Разрешить доступ</button>
+            <button className="cta ghost" style={{ marginTop: 8 }} onClick={() => setAskGeo(false)}>Не сейчас</button>
+          </div>
+        </div>
+      )}
+
+      {/* Нижняя навигационная панель всегда доступна и сбрасывает зависшие экраны */}
+      <BottomNav tab={tab} setTab={setTab} />
+    </div>
+  );
+}
