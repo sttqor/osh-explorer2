@@ -1,7 +1,14 @@
 :root {
   --orange: #ff5533;
   --orange-dark: #e63e1c;
+  --terracotta: #ff5533;
+  --terracotta-dark: #e63e1c;
+  --terracotta-glow: #fff1ec;
+  --sand-50: #fbf8f3;
+  --sand-100: #f3ece1;
+  --sand-200: #e6dac9;
   --ink: #1a1a1a;
+  --ink-soft: #38312b;
   --muted: #6b6b6b;
   --line: #ececec;
   --bg: #f6f6f6;
@@ -61,6 +68,7 @@ img {
 .gyg-nav {
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -126,6 +134,46 @@ img {
 .gyg-nav span {
   font-size: 10px;
   font-weight: 700;
+}
+
+.gyg-nav .nav-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0;
+}
+
+/* «Маршрут» — главная кнопка: всегда заметная и красная. */
+.gyg-nav button.route-tab::before {
+  display: none;
+}
+
+.gyg-nav button.route-tab {
+  color: var(--orange-dark);
+}
+
+.gyg-nav button.route-tab .nav-icon {
+  width: 54px;
+  height: 54px;
+  background: var(--terracotta);
+  color: #fff;
+  transform: translateY(0);
+  box-shadow: 0 7px 18px rgba(255, 85, 51, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.gyg-nav button.route-tab .nav-icon svg {
+  stroke: #fff;
+  width: 26px;
+  height: 26px;
+  stroke-width: 2.4;
+}
+
+.gyg-nav button.route-tab>span:last-child {
+  margin-top: -12px;
+  font-size: 11px;
+  color: var(--orange-dark);
 }
 
 .card {
@@ -359,4 +407,31 @@ img {
   text-align: center;
   padding: 48px 24px;
   color: var(--muted);
+}
+
+.home-route-cta {
+  width: auto;
+  padding: 7px 11px;
+  border-radius: 8px;
+  font-size: 9px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.fact-card {
+  padding: 11px 12px;
+  border: 1px solid #eee5da;
+}
+
+.fact-card b {
+  display: block;
+  color: var(--terracotta-dark);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.fact-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 9.5px;
+  line-height: 1.35;
 }

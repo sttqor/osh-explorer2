@@ -1,17 +1,17 @@
+import { Sparkles, Hand, Compass, UtensilsCrossed, Landmark, Mountain } from "lucide-react";
 export const CITY = { name: "Ош", lat: 40.5283, lng: 72.7985 };
 
 export const CATEGORIES = [
-  { id: "all", label: "Все", emoji: "✨" },
-  { id: "practices", label: "Практики", emoji: "🖐️" },
-  { id: "tours", label: "Экскурсии", emoji: "🧭" },
-  { id: "food", label: "Еда", emoji: "🍜" },
-  { id: "culture", label: "Культура", emoji: "🕌" },
-  { id: "nature", label: "Природа", emoji: "⛰️" },
+  { id: "all", label: "Все", Icon: Sparkles },
+  { id: "practices", label: "Практики", Icon: Hand },
+  { id: "tours", label: "Экскурсии", Icon: Compass },
+  { id: "food", label: "Еда", Icon: UtensilsCrossed },
+  { id: "culture", label: "Культура", Icon: Landmark },
+  { id: "nature", label: "Природа", Icon: Mountain },
 ];
 
 export const EXPERIENCES = [
-  {
-    id: "pottery",
+  { id: "pottery",
     title: "Гончарная практика: пиала своими руками",
     category: "practices",
     type: "Мастер-класс",
