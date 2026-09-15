@@ -11,7 +11,8 @@ export const CATEGORIES = [
 ];
 
 export const EXPERIENCES = [
-  { id: "pottery",
+  {
+    id: "pottery",
     title: "Гончарная практика: пиала своими руками",
     category: "practices",
     type: "Мастер-класс",

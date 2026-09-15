@@ -972,7 +972,7 @@ export default function App() {
                                 width: 6,
                                 height: 6,
                                 borderRadius: '50%',
-                                backgroundColor: '#F26419',
+                               backgroundColor: '#F26419',
                                 marginTop: 4,
                                 boxShadow: '0 0 8px #F26419'
                             }} />

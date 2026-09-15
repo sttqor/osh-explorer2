@@ -37,7 +37,7 @@ import {
   loadLeaflet,
   makeCode,
   upcomingDates,
-} from "./data.js";
+} from "./data";
 
 const TABS = [
   { id: "home", label: "Ош: Гид", Icon: Compass },
@@ -704,7 +704,7 @@ export default function App() {
 
   return (
     <div className="gyg-app">
-        {tab === "home" && <HomeView onGoToRoute={() => setTab("route")} />}
+      {tab === "home" && <HomeView onGoToRoute={() => setTab("route")} />}
 
       {tab === "map" && (
         <ExploreMap
