@@ -34,6 +34,7 @@ import {
   CATEGORIES,
   CITY,
   EXPERIENCES,
+  FACTS,
   loadLeaflet,
   makeCode,
   upcomingDates,
@@ -190,7 +191,69 @@ function ExploreMap({ items, selectedId, onSelect, userLocation, footer }) {
 }
 
 // 1. ГЛАВНАЯ: ИСТОРИЧЕСКИЙ ГИД И СОВЕТЫ
-function HomeView({ onGoToRoute }) {
+function FactSheet({ fact, onClose, onGoTo }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fact-overlay" onClick={onClose}>
+      <div className="fact-sheet" onClick={(e) => e.stopPropagation()}>
+        <div style={{ position: "relative" }}>
+          <img src={fact.image} alt="" style={{ width: "100%", height: 170, objectFit: "cover" }} />
+          <div className="fact-sheet-fade" />
+          <button
+            className="icon-btn"
+            style={{ position: "absolute", top: 12, right: 12 }}
+            onClick={onClose}
+            aria-label="Закрыть"
+          >
+            <ChevronDown size={20} />
+          </button>
+          <div style={{ position: "absolute", left: 16, right: 60, bottom: 12, color: "#fff" }}>
+            <span className="fact-tag">{fact.tag}</span>
+            <h2 style={{ margin: "6px 0 0", fontSize: 20, fontWeight: 900, letterSpacing: -0.4, lineHeight: 1.15 }}>
+              {fact.emoji} {fact.title}
+            </h2>
+          </div>
+        </div>
+
+        <div style={{ padding: "14px 16px 20px" }}>
+          {fact.body.map((p) => (
+            <p key={p} style={{ margin: "0 0 10px", fontSize: 13.5, lineHeight: 1.55, color: "#333" }}>
+              {p}
+            </p>
+          ))}
+
+          <b style={{ fontSize: 13 }}>Коротко о главном</b>
+          <ul style={{ margin: "8px 0 16px", paddingLeft: 18 }}>
+            {fact.points.map((p) => (
+              <li key={p} style={{ fontSize: 13, lineHeight: 1.45, marginBottom: 6, color: "#444" }}>
+                {p}
+              </li>
+            ))}
+          </ul>
+
+          <button className="cta" onClick={() => onGoTo(fact.linkTab)}>
+            {fact.linkLabel} →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HomeView({ onGoToRoute, onGoTo }) {
+  const [openFact, setOpenFact] = useState(null);
+
   return (
     <div className="gyg-scroll">
       <section style={{ position: "relative", height: 154, overflow: "hidden", color: "#fff" }}>
@@ -207,10 +270,40 @@ function HomeView({ onGoToRoute }) {
       <section style={{ padding: "14px 16px 0" }}>
         <h2 style={{ fontSize: 15, fontWeight: 900, margin: "0 0 10px" }}>Интересные факты</h2>
         <div style={{ display: "grid", gap: 10 }}>
-          <article className="card fact-card"><b>🏛️ Город старше Рима</b><p>Археологические находки на склонах Сулайман-Тоо подтверждают свыше 3000 лет непрерывной городской истории.</p></article>
-          <article className="card fact-card"><b>🍚 Легендарный рис Девзира</b><p>Главный сорт для ошского плова выращивают на местных полях Ферганской долины.</p></article>
+          {FACTS.map((f) => (
+            <article
+              key={f.id}
+              className="card fact-card"
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpenFact(f)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") setOpenFact(f);
+              }}
+            >
+              <div className="row" style={{ alignItems: "flex-start", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <b>{f.emoji} {f.title}</b>
+                  <p>{f.short}</p>
+                  <span className="fact-more">Подробнее →</span>
+                </div>
+                <ChevronRight size={16} color="var(--terracotta)" style={{ flexShrink: 0, marginTop: 2 }} />
+              </div>
+            </article>
+          ))}
         </div>
       </section>
+
+      {openFact && (
+        <FactSheet
+          fact={openFact}
+          onClose={() => setOpenFact(null)}
+          onGoTo={(tab) => {
+            setOpenFact(null);
+            onGoTo(tab);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -704,7 +797,7 @@ export default function App() {
 
   return (
     <div className="gyg-app ornament-bg">
-      {tab === "home" && <HomeView onGoToRoute={() => setTab("route")} />}
+      {tab === "home" && <HomeView onGoToRoute={() => setTab("route")} onGoTo={setTab} />}
 
       {tab === "map" && (
         <ExploreMap
