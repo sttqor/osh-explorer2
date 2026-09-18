@@ -479,3 +479,18 @@ img {
   font-size: 9.5px;
   line-height: 1.35;
 }
+
+/* Кыргызский орнамент (мотив «кочкор мюйюз» — бараний рог), лёгкая текстура фона */
+.ornament-bg {
+  background-color: var(--bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Cg fill='none' stroke='%23e6dac9' stroke-width='2'%3E%3Cpath d='M16 68c0-26 18-26 18-44 0-9-7-13-13-9'/%3E%3Cpath d='M68 68c0-26-18-26-18-44 0-9 7-13 13-9'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 84px 84px;
+}
+
+.ornament-accent {
+  background-color: var(--terracotta-glow);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cg fill='none' stroke='%23ffcdbd' stroke-width='2'%3E%3Cpath d='M12 52c0-20 14-20 14-34 0-7-5-10-10-7'/%3E%3Cpath d='M52 52c0-20-14-20-14-34 0-7 5-10 10-7'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 64px 64px;
+}

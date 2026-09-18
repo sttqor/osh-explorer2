@@ -289,7 +289,7 @@ function RouteView({ items, setItems, onGoToTours }) {
         </div>
 
         {items.length === 0 ? (
-          <div className="card" style={{ padding: "36px 20px", textAlign: "center" }}>
+          <div className="card ornament-accent" style={{ padding: "36px 20px", textAlign: "center" }}>
             <Compass size={40} color="var(--terracotta)" />
             <h3 style={{ margin: "12px 0 6px" }}>Маршрут пока пуст</h3>
             <p className="muted" style={{ margin: "0 0 16px", fontSize: 13 }}>
@@ -703,7 +703,7 @@ export default function App() {
   }
 
   return (
-    <div className="gyg-app">
+    <div className="gyg-app ornament-bg">
       {tab === "home" && <HomeView onGoToRoute={() => setTab("route")} />}
 
       {tab === "map" && (
