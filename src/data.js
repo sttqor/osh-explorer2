@@ -254,8 +254,8 @@ export function makeCode() {
 export const FACTS = [
   {
     id: "older-than-rome",
-    emoji: "🏛️",
     title: "Город старше Рима",
+    emoji: "🏛️",
     short: "Археологические находки на склонах Сулайман-Тоо подтверждают свыше 3000 лет непрерывной городской истории.",
     image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=85",
     tag: "История",

@@ -584,3 +584,151 @@ img {
     transform: translateY(0);
   }
 }
+
+.route-stats-pill {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 20px;
+  padding: 14px 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.route-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.route-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.route-stat-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.route-stat-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin: 2px 0;
+}
+
+.route-stats-pill {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 20px;
+  padding: 14px 6px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.route-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.route-stat-value {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.route-stat-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.route-stat-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin: 2px 0;
+}
+
+.route-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.route-timeline-row {
+  display: flex;
+  gap: 10px;
+}
+
+.route-timeline-rail {
+  width: 46px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.route-timeline-time {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.route-timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--terracotta);
+  flex-shrink: 0;
+}
+
+.route-timeline-line {
+  flex: 1;
+  width: 0;
+  border-left: 2px dashed #f0c9bd;
+  margin-top: 2px;
+}
+
+.route-place-card {
+  flex: 1;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.route-place-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+}
+
+.route-link {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--terracotta-dark);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}

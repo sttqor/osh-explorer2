@@ -262,7 +262,7 @@ function HomeView({ onGoToRoute, onGoTo }) {
         <div style={{ position: "absolute", left: 16, right: 16, bottom: 13 }}>
           <span style={{ display: "inline-block", background: "var(--terracotta)", padding: "3px 7px", borderRadius: 5, fontSize: 8, fontWeight: 900, marginBottom: 5 }}>ДРЕВНИЙ ОШ · 3000 ЛЕТ</span>
           <h1 style={{ fontSize: 20, lineHeight: 1.08, margin: "0 0 4px", fontWeight: 900, letterSpacing: -0.45 }}>Ош: Сердце Шёлкового пути</h1>
-          <p style={{ margin: "0 0 8px", fontSize: 9.5, lineHeight: 1.25, maxWidth: 310 }}>Священная гора Сулайман-Тоо, древнейшие базары Востока, аромат тандырной самсы и живые ремёсла.</p>
+          <p style={{ margin: "0 0 8px", fontSize: 9.5, lineHeight: 1.25, maxWidth: 310 }}>Священная а Сулайман-Тоо, древнейшие базары Востока, аромат тандырной самсы и живые ремёсла.</p>
           <button className="cta home-route-cta" onClick={onGoToRoute}>Собрать маршрут →</button>
         </div>
       </section>
@@ -309,17 +309,43 @@ function HomeView({ onGoToRoute, onGoTo }) {
 }
 
 // 2. МАРШРУТ: ЧИСТЫЙ ПЛАНИРОВЩИК (БЕЗ ВЫБОРА МЕСТ СНИЗУ)
+function parseDurationMinutes(duration) {
+  if (!duration) return 90;
+  const hourMatch = duration.match(/(\d+(?:[.,]\d+)?)\s*(?:ч|час)/i);
+  const minMatch = duration.match(/(\d+)\s*мин/i);
+  let minutes = 0;
+  if (hourMatch) minutes += parseFloat(hourMatch[1].replace(",", ".")) * 60;
+  if (minMatch) minutes += parseInt(minMatch[1], 10);
+  if (!hourMatch && !minMatch) minutes = 90;
+  return minutes;
+}
+
+function minutesToClock(mins) {
+  const h = Math.floor(mins / 60) % 24;
+  const m = Math.round(mins % 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
 function RouteView({ items, setItems, onGoToTours }) {
   const [mode, setMode] = useState("self");
+  const [expandedId, setExpandedId] = useState(null);
 
   const stats = useMemo(() => {
     const count = items.length;
-    if (count === 0) return { km: "0 км", time: "0 ч", timeline: "--:--" };
+    if (count === 0) return { km: "0 км", time: "0 ч" };
     return {
       km: `${(count * 1.6).toFixed(1)} км`,
-      time: `~${Math.floor((count * 75) / 60)} ч ${(count * 75) % 60} мин`,
-      timeline: "10:00 — 15:30",
+      time: `${(count * 1.25).toFixed(1)} ч`,
     };
+  }, [items]);
+
+  const times = useMemo(() => {
+    let cursor = 9 * 60;
+    return items.map((item) => {
+      const start = cursor;
+      cursor += parseDurationMinutes(item.duration);
+      return minutesToClock(start);
+    });
   }, [items]);
 
   const moveItem = (index, dir) => {
@@ -353,32 +379,43 @@ function RouteView({ items, setItems, onGoToTours }) {
         </div>
       </div>
 
-      <div className="row" style={{ padding: "12px 16px", gap: 8 }}>
-        <div className="card" style={{ flex: 1, padding: "10px 8px", textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 11 }}>Дистанция</div>
-          <b style={{ fontSize: 14 }}>{stats.km}</b>
-        </div>
-        <div className="card" style={{ flex: 1, padding: "10px 8px", textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 11 }}>Длительность</div>
-          <b style={{ fontSize: 14 }}>{stats.time}</b>
-        </div>
-        <div className="card" style={{ flex: 1, padding: "10px 8px", textAlign: "center" }}>
-          <div className="muted" style={{ fontSize: 11 }}>Таймлайн</div>
-          <b style={{ fontSize: 14 }}>{stats.timeline}</b>
+      <div style={{ padding: "12px 16px" }}>
+        <div className="route-stats-pill">
+          <div className="route-stat">
+            <div className="route-stat-value">
+              <MapPin size={16} color="var(--terracotta)" />
+              {stats.km}
+            </div>
+            <span className="route-stat-label">Пройдем</span>
+          </div>
+          <div className="route-stat-divider" />
+          <div className="route-stat">
+            <div className="route-stat-value">
+              <Clock size={16} color="var(--orange)" />
+              {stats.time}
+            </div>
+            <span className="route-stat-label">Время</span>
+          </div>
+          <div className="route-stat-divider" />
+          <div className="route-stat">
+            <div className="route-stat-value">
+              <RouteIcon size={16} color="var(--orange)" />
+              {items.length}
+            </div>
+            <span className="route-stat-label">Точки</span>
+          </div>
         </div>
       </div>
 
       <div style={{ padding: "0 16px 20px" }}>
-        <div className="row" style={{ justifyContent: "space-between", marginBottom: 12 }}>
-          <b>Точки дневного маршрута ({items.length})</b>
-          {items.length > 0 && (
-            <button
-              onClick={() => setItems([])}
-              style={{ border: "none", background: "none", color: "var(--terracotta)", fontWeight: 700, cursor: "pointer" }}
-            >
-              Очистить все
-            </button>
-          )}
+        <div className="row" style={{ justifyContent: "space-between", marginBottom: 14 }}>
+          <b style={{ fontSize: 16 }}>Маршрут прогулки</b>
+          <button
+            onClick={onGoToTours}
+            style={{ border: "none", background: "none", color: "var(--terracotta)", fontWeight: 800, fontSize: 13, cursor: "pointer" }}
+          >
+            + Добавить место
+          </button>
         </div>
 
         {items.length === 0 ? (
@@ -393,54 +430,65 @@ function RouteView({ items, setItems, onGoToTours }) {
             </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {items.map((item, idx) => (
-              <div key={item.id} className="card" style={{ padding: 12 }}>
-                <div className="row" style={{ alignItems: "flex-start", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      background: "var(--terracotta)",
-                      color: "#fff",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                      fontWeight: 800,
-                    }}
-                  >
-                    {idx + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14 }}>{item.title}</div>
-                    <div className="muted" style={{ fontSize: 11, margin: "4px 0 8px" }}>
-                      ⏱️ {item.duration} · {item.place}
+          <>
+            <div className="route-timeline">
+              {items.map((item, idx) => {
+                const isOpen = expandedId === item.id;
+                return (
+                  <div key={item.id} className="route-timeline-row">
+                    <div className="route-timeline-rail">
+                      <span className="route-timeline-time">{times[idx]}</span>
+                      <span className="route-timeline-dot" />
+                      {idx < items.length - 1 && <span className="route-timeline-line" />}
+                    </div>
+
+                    <div className="card route-place-card">
+                      <div className="row" style={{ alignItems: "flex-start", gap: 10 }}>
+                        <img src={item.image} alt="" className="route-place-thumb" />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.25 }}>{item.title}</div>
+                          <div className="muted" style={{ fontSize: 11, margin: "3px 0 6px" }}>
+                            {item.type} · {item.place}
+                          </div>
+                          {isOpen && (
+                            <p style={{ margin: "0 0 8px", fontSize: 12, lineHeight: 1.5, color: "#444" }}>
+                              {item.description}
+                            </p>
+                          )}
+                          <div className="row" style={{ gap: 14 }}>
+                            <button
+                              className="route-link"
+                              onClick={() => setExpandedId(isOpen ? null : item.id)}
+                            >
+                              {isOpen ? "Скрыть" : "Подробнее"}
+                            </button>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                          <button className="icon-btn" style={{ width: 26, height: 26 }} disabled={idx === 0} onClick={() => moveItem(idx, -1)}>
+                            <ChevronUp size={12} />
+                          </button>
+                          <button className="icon-btn" style={{ width: 26, height: 26 }} disabled={idx === items.length - 1} onClick={() => moveItem(idx, 1)}>
+                            <ChevronDown size={12} />
+                          </button>
+                          <button className="icon-btn" style={{ width: 26, height: 26, color: "var(--terracotta)" }} onClick={() => removeItem(item.id)}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <button className="icon-btn" style={{ width: 28, height: 28 }} disabled={idx === 0} onClick={() => moveItem(idx, -1)}>
-                      <ChevronUp size={14} />
-                    </button>
-                    <button className="icon-btn" style={{ width: 28, height: 28 }} disabled={idx === items.length - 1} onClick={() => moveItem(idx, 1)}>
-                      <ChevronDown size={14} />
-                    </button>
-                    <button className="icon-btn" style={{ width: 28, height: 28, color: "var(--terracotta)" }} onClick={() => removeItem(item.id)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
             <button
               className="cta"
-              style={{ marginTop: 12 }}
+              style={{ marginTop: 16 }}
               onClick={() => alert(`Запуск пешеходной навигации по ${items.length} точкам Оша!`)}
             >
               🚀 Открыть навигацию ({items.length} ост.)
             </button>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -742,7 +790,7 @@ function TicketView({ booking, onClose }) {
 
 // ГЛАВНЫЙ ЭКСПОРТ
 export default function App() {
-  const [tab, setTab] = useState("route");
+  const [tab, setTab] = useState("home");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [saved, setSaved] = useState(() => new Set());
