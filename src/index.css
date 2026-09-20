@@ -75,6 +75,12 @@ img {
 
 .gyg-app>*:not(.gyg-nav) {
   animation: tab-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .gyg-app>*:not(.gyg-nav) {
+    position: relative;
+    z-index: 1;
+    animation: tab-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 }
 
 .gyg-scroll {
@@ -483,11 +489,24 @@ img {
 /* Кыргызский орнамент (мотив «кочкор мюйюз» — бараний рог), лёгкая текстура фона */
 .ornament-bg {
   background-color: #fdf9f6;
+  position: relative;
+}
+
+.ornament-bg::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  height: 100vh;
   background-image: url("/ornament-tile.webp");
   background-repeat: repeat-y;
   background-position: top center;
   background-size: 100% auto;
-
+  z-index: 0;
+  pointer-events: none;
 }
 
 .ornament-accent {
