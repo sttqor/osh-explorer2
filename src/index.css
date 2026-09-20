@@ -482,11 +482,12 @@ img {
 
 /* Кыргызский орнамент (мотив «кочкор мюйюз» — бараний рог), лёгкая текстура фона */
 .ornament-bg {
-  background-color: #fdf6f0;
-  background-image: url("/ornament-bg.webp");
-  background-repeat: no-repeat;
-  background-position: center top;
-  background-size: cover;
+  background-color: #fdf9f6;
+  background-image: url("/ornament-tile.webp");
+  background-repeat: repeat-y;
+  background-position: top center;
+  background-size: 100% auto;
+
 }
 
 .ornament-accent {
