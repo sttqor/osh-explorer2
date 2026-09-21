@@ -481,39 +481,27 @@ img {
   line-height: 1.35;
 }
 
-/* Кыргызский орнамент: отдельный декоративный слой за существующим интерфейсом. */
+/* Кыргызский орнамент: один декоративный слой за существующим интерфейсом. */
 .ornament-bg {
-  background-color: #fbf8f3;
+  background-color: #fdf9f6;
   position: relative;
   isolation: isolate;
 }
 
-.ornament-bg::before,
-.ornament-bg::after {
+.ornament-bg::before {
   content: "";
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
+  inset: 0;
   width: 100%;
   max-width: 430px;
+  margin: 0 auto;
   pointer-events: none;
   z-index: 0;
   background-image: url("/ornament-tile.webp");
   background-repeat: no-repeat;
-  background-size: 100% auto;
-  opacity: 0.16;
-}
-
-.ornament-bg::before {
-  top: 0;
-  height: 47vh;
-  background-position: top center;
-}
-
-.ornament-bg::after {
-  bottom: 0;
-  height: 47vh;
-  background-position: bottom center;
+  background-position: center;
+  background-size: 100% 100%;
+  opacity: 0.34;
 }
 
 /* Кликабельные карточки фактов */
