@@ -169,7 +169,6 @@ img {
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
-/* «Маршрут» — главная кнопка: выступает над панелью и привлекает внимание. */
 .gyg-nav button.route-tab::before {
   display: none;
 }
@@ -482,45 +481,39 @@ img {
   line-height: 1.35;
 }
 
-/* Кыргызский орнамент (мотив «кочкор мюйюз» — бараний рог), лёгкая текстура фона */
-/* Кыргызский орнамент — по одному приглушённому узору сверху и снизу, неподвижны при скролле */
+/* Кыргызский орнамент: отдельный декоративный слой за существующим интерфейсом. */
 .ornament-bg {
-  background-color: #fdf9f6;
+  background-color: #fbf8f3;
   position: relative;
+  isolation: isolate;
 }
 
-.ornament-bg::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 430px;
-  height: 45vh;
-  background-image: url("/ornament-tile.webp");
-  background-repeat: no-repeat;
-  background-position: top center;
-  background-size: 100% auto;
-  z-index: 0;
-  pointer-events: none;
-}
-
+.ornament-bg::before,
 .ornament-bg::after {
   content: "";
   position: fixed;
-  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  height: 45vh;
+  pointer-events: none;
+  z-index: 0;
   background-image: url("/ornament-tile.webp");
   background-repeat: no-repeat;
-  background-position: bottom center;
   background-size: 100% auto;
-  z-index: 0;
-  pointer-events: none;
+  opacity: 0.16;
+}
+
+.ornament-bg::before {
+  top: 0;
+  height: 47vh;
+  background-position: top center;
+}
+
+.ornament-bg::after {
+  bottom: 0;
+  height: 47vh;
+  background-position: bottom center;
 }
 
 /* Кликабельные карточки фактов */
@@ -611,46 +604,6 @@ img {
   to {
     transform: translateY(0);
   }
-}
-
-.route-stats-pill {
-  display: flex;
-  align-items: center;
-  background: #fff;
-  border-radius: 20px;
-  padding: 14px 6px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-}
-
-.route-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.route-stat-value {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 900;
-  font-size: 15px;
-}
-
-.route-stat-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.route-stat-divider {
-  width: 1px;
-  align-self: stretch;
-  background: var(--line);
-  margin: 2px 0;
 }
 
 .route-stats-pill {
